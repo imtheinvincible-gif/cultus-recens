@@ -7,8 +7,8 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const payload = await request.json();
+    // eslint-disable-next-line
+    const _payload = await request.json();
 
     // 1. Sanitize input and validate variation IDs and stock availability against database
     // payload.items.forEach(item => prisma.productVariation.findUnique(...))

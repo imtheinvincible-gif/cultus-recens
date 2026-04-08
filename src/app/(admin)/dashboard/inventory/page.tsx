@@ -2,7 +2,6 @@
 import React, { useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 
 // ─── Types ────────────────────────────────────────────────
 interface ProductVariation { size: string; stock: number; }
@@ -257,7 +256,6 @@ function DeleteConfirm({ name, onConfirm, onCancel }: { name: string; onConfirm:
 
 // ─── MAIN COMPONENT ────────────────────────────────────────────
 export default function InventoryManagement() {
-  const router = useRouter();
   const [products, setProducts] = useState<Product[]>(SEED);
   const [modal, setModal] = useState<{ mode: 'add' | 'edit'; product: Product | null } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);

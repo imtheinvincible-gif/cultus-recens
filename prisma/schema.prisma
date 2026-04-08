@@ -1,0 +1,127 @@
+// This is your Prisma database schema definition.
+// It uses PostgreSQL to manage the complex relationships between Users, Categories, Products, Variations, and Orders.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -------------------------------------------------------------
+// USER & AUTHENTICATION
+// -------------------------------------------------------------
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String   // Hashed via bcrypt/argon2
+  role      Role     @default(CUSTOMER)
+  
+  firstName String?
+  lastName  String?
+  
+  orders    Order[]
+  addresses Address[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+model Address {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  street    String
+  city      String
+  state     String
+  zip       String
+  country   String
+}
+
+// -------------------------------------------------------------
+// INVENTORY MANAGEMENT 
+// -------------------------------------------------------------
+model Product {
+  id          String             @id @default(uuid())
+  name        String
+  description String             @db.Text
+  price       Decimal            @db.Decimal(10, 2)
+  
+  // High-End constraints: array of strict 1:1 image URIs
+  images      String[]           
+  
+  categoryId  String
+  category    Category           @relation(fields: [categoryId], references: [id])
+  
+  variations  ProductVariation[]
+  
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model Category {
+  id       String    @id @default(uuid())
+  name     String    @unique // e.g., "Tops", "Outerwear"
+  products Product[]
+}
+
+// Handles the complexity of fast-fashion catalog variations (Size/Color grids)
+model ProductVariation {
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  size      String   // e.g., "S", "M", "L", "Oversized"
+  color     String   // e.g., "Matte Black", "Onyx", "Chalk White"
+  sku       String   @unique
+  stock     Int      @default(0) // Watched by "Low Stock" trigger
+  
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// -------------------------------------------------------------
+// ORDER PROCESSING
+// -------------------------------------------------------------
+model Order {
+  id          String      @id @default(uuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  
+  status      OrderStatus @default(PENDING)
+  totalAmount Decimal     @db.Decimal(10, 2)
+  
+  items       OrderItem[]
+  
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model OrderItem {
+  id                 String           @id @default(uuid())
+  orderId            String
+  order              Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  productVariationId String
+  variation          ProductVariation @relation(fields: [productVariationId], references: [id])
+  
+  quantity           Int
+  priceAtPurchase    Decimal          @db.Decimal(10, 2) // Locks in price at checkout
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}

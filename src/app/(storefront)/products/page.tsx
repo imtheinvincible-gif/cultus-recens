@@ -3,17 +3,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams, useRouter } from 'next/navigation';
-
-const ALL_PRODUCTS = [
-  { id: 'oversized-essential-tee', name: 'Oversized Essential Tee', price: '₹999', image: '/product-tee.png', category: 'Tops' },
-  { id: 'technical-cargo-pant', name: 'Technical Cargo Pant', price: '₹2,499', image: '/product-cargo.png', category: 'Bottoms' },
-  { id: 'minimalist-zip-hoodie', name: 'Minimalist Zip Hoodie', price: '₹1,899', image: '/product-hoodie.png', category: 'Tops' },
-  { id: 'structured-shacket', name: 'Structured Shacket', price: '₹2,199', image: '/product-shacket.png', category: 'Outerwear' },
-  { id: 'raw-hem-denim', name: 'Raw Hem Denim', price: '₹1,999', image: '/product-cargo.png', category: 'Bottoms' },
-  { id: 'heavyweight-crewneck', name: 'Heavyweight Crewneck', price: '₹1,299', image: '/product-hoodie.png', category: 'Tops' },
-  { id: 'draped-trench-coat', name: 'Draped Trench Coat', price: '₹3,999', image: '/product-shacket.png', category: 'Outerwear' },
-  { id: 'layering-turtleneck', name: 'Layering Turtleneck', price: '₹899', image: '/product-tee.png', category: 'Tops' },
-];
+import { ALL_PRODUCTS } from '@/lib/products';
 
 function ProductsContent() {
   const searchParams = useSearchParams();
@@ -49,11 +39,11 @@ function ProductsContent() {
     router.push(`/products?${params.toString()}`, { scroll: false });
   };
 
-  // Filter
+  // Filter — size filter now actually filters by availableSizes
   let filtered = ALL_PRODUCTS.filter(p => {
     const matchCat = activeCategory === 'All' || p.category === activeCategory;
     const matchSearch = !urlSearch || p.name.toLowerCase().includes(urlSearch.toLowerCase());
-    const matchSize = !activeSize; // size filter is UI-only for now
+    const matchSize = !activeSize || p.availableSizes.includes(activeSize);
     return matchCat && matchSearch && matchSize;
   });
 

@@ -9,8 +9,11 @@ export default function CheckoutPage() {
   const removeItem = useCartStore((state) => state.removeItem);
   
   const subtotal = cartItems.reduce((acc, item) => {
-    const numericPrice = parseInt(item.price.replace(/\\D/g, ''));
-    return acc + (numericPrice * item.quantity);
+    // Use priceNumeric if available; fall back to parsing the price string safely
+    const numericPrice =
+      (item as { priceNumeric?: number }).priceNumeric ??
+      parseInt(item.price.replace(/[^\d]/g, ''), 10);
+    return acc + ((isNaN(numericPrice) ? 0 : numericPrice) * item.quantity);
   }, 0);
 
   return (

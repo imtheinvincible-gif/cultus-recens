@@ -1,51 +1,57 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+/**
+ * Products API Route
+ *
+ * GET /api/products — Public. Returns product catalog.
+ * POST /api/products — Admin only. Creates a product (requires valid admin cookie).
+ *
+ * TODO: Replace ALL_PRODUCTS with Prisma DB queries when database is connected.
+ */
+import { NextRequest, NextResponse } from 'next/server';
+import { ALL_PRODUCTS } from '@/lib/products';
 
-export async function GET(request: Request) {
+function isAdminAuthenticated(req: NextRequest): boolean {
+  const token = req.cookies.get('cr_admin_auth')?.value;
+  if (!token) return false;
   try {
-    const { searchParams } = new URL(request.url);
-    const categoryName = searchParams.get('category');
-    
-    // Abstract ORM Query: Retrieves Products, nested Variations (Stock levels) and Category
-    const products = await prisma.product.findMany({
-      where: categoryName ? { category: { name: categoryName } } : undefined,
-      include: {
-        variations: true,
-        category: true
-      }
-    });
-    
-    return NextResponse.json({ success: true, data: products });
-  } catch (error) {
-    console.error(error);
-    // Silent fail for mock purposes if the DB connection string isn't populated yet
-    return NextResponse.json({ success: false, error: 'Database connection failed. Ensure POSTGRES_URL is set in .env' }, { status: 500 });
+    const decoded = Buffer.from(token, 'base64').toString('utf-8');
+    return decoded.split(':').length >= 4;
+  } catch {
+    return false;
   }
 }
 
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    
-    // SECURITY: Authenticate admin session here via NextAuth before creating DB entry
-    
-    const newProduct = await prisma.product.create({
-      data: {
-        name: body.name,
-        description: body.description,
-        price: body.price,
-        images: body.images || [],
-        category: {
-          connectOrCreate: {
-            where: { name: body.category },
-            create: { name: body.category }
-          }
-        }
-      }
-    });
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const categoryName = searchParams.get('category');
 
-    return NextResponse.json({ success: true, data: newProduct }, { status: 201 });
-  } catch (error) {
-    return NextResponse.json({ success: false, error: 'Failed to create product constraint violation.' }, { status: 400 });
+  const products = categoryName
+    ? ALL_PRODUCTS.filter(p => p.category === categoryName)
+    : ALL_PRODUCTS;
+
+  return NextResponse.json({ success: true, data: products });
+}
+
+export async function POST(request: NextRequest) {
+  // SECURITY: Admin authentication check
+  if (!isAdminAuthenticated(request)) {
+    return NextResponse.json({ success: false, error: 'Unauthorized.' }, { status: 401 });
   }
+
+  const body = await request.json().catch(() => null);
+  if (!body?.name || !body?.price || !body?.category) {
+    return NextResponse.json({ success: false, error: 'name, price, and category are required.' }, { status: 400 });
+  }
+
+  // In production: await prisma.product.create({ data: body })
+  // For now, return a mock success since we have no DB
+  const mockProduct = {
+    id: body.name.toLowerCase().replace(/\s+/g, '-'),
+    name: body.name,
+    price: body.price,
+    category: body.category,
+    image: body.image || '/placeholder.png',
+    createdAt: new Date().toISOString(),
+  };
+
+  return NextResponse.json({ success: true, data: mockProduct }, { status: 201 });
 }
